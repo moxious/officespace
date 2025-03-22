@@ -1,24 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Office Space Meeting Cost Calculator
+
+*Vibecoded with Cursor*
+
+A real-time meeting cost calculator inspired by Office Space. Track the cost of your meetings as they happen, because time is money! Features Peter Gibbons' watchful gaze to ensure you're not wasting company resources.
+
+## Features
+
+- Real-time cost calculation
+- UTC timezone support for global teams
+- Per second, minute, and hour cost breakdown
+- Clean, modern UI with Tailwind CSS
+- Fully responsive design
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18.x or later
+- npm or yarn
+
+### Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/yourusername/officespace.git
+cd officespace
+```
+
+2. Install dependencies:
+```bash
+npm install
+# or
+yarn install
+```
+
+3. Run the development server:
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usage
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Enter the number of people in the meeting
+2. Enter the cost per person per hour
+3. Click "Start Meeting" to begin tracking costs
+4. Watch the money tick away in real-time
+5. Click "End Meeting" when you're done
+
+## Development
+
+The application is built with:
+- Next.js 14
+- React
+- TypeScript
+- Tailwind CSS
+
+All timestamps are handled in UTC to ensure consistent calculations across different timezones.
 
 ## Learn More
 

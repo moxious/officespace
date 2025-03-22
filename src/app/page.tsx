@@ -1,103 +1,225 @@
-import Image from "next/image";
+'use client';
+
+import { useState, FormEvent, useEffect } from 'react';
+import Image from 'next/image';
+
+interface MeetingCostResponse {
+  costPerHour: number;
+  costPerMinute: number;
+  costPerSecond: number;
+  totalCostSoFar: number;
+  startTime: string;
+  numberOfPeople: number;
+  costPerPersonPerHour: number;
+  elapsedSeconds: number;
+}
 
 export default function Home() {
+  const [numPeople, setNumPeople] = useState('');
+  const [costPerHour, setCostPerHour] = useState('');
+  const [meetingCosts, setMeetingCosts] = useState<MeetingCostResponse | null>(null);
+  const [error, setError] = useState('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [meetingStartTime, setMeetingStartTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (isRunning && meetingStartTime) {
+      // Initial fetch
+      fetchMeetingCost();
+      
+      // Set up interval for subsequent fetches
+      intervalId = setInterval(fetchMeetingCost, 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isRunning, meetingStartTime]);
+
+  const fetchMeetingCost = async () => {
+    if (!meetingStartTime) return;
+
+    try {
+      const response = await fetch('/api/meeting', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          startTime: meetingStartTime,
+          numberOfPeople: parseInt(numPeople),
+          costPerPersonPerHour: parseFloat(costPerHour),
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to calculate meeting cost');
+        setIsRunning(false);
+        return;
+      }
+
+      const data = await response.json();
+      setMeetingCosts(data);
+    } catch (err) {
+      setError('Failed to calculate meeting cost');
+      setIsRunning(false);
+    }
+  };
+
+  const formatUTCTimestamp = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleString('en-US', { 
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      timeZoneName: 'short'
+    });
+  };
+
+  const startMeeting = async (e: FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setMeetingCosts(null);
+
+    const people = parseInt(numPeople);
+    const cost = parseFloat(costPerHour);
+
+    if (isNaN(people) || people <= 0 || !Number.isInteger(people)) {
+      setError('Number of people must be a positive integer');
+      return;
+    }
+
+    if (isNaN(cost) || cost <= 0) {
+      setError('Cost per hour must be a positive number');
+      return;
+    }
+
+    // Ensure UTC timestamp
+    const startTime = new Date().toISOString();
+    setMeetingStartTime(startTime);
+    setIsRunning(true);
+  };
+
+  const stopMeeting = () => {
+    setIsRunning(false);
+  };
+
+  const formatDuration = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const remainingSeconds = seconds % 60;
+    return `${hours}h ${minutes}m ${remainingSeconds}s`;
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
+    <div className="min-h-screen flex flex-col items-center justify-center p-8">
+      <div className="mb-8 relative w-32 h-32">
         <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
+          src="/petergibbons.png"
+          alt="Peter Gibbons from Office Space"
+          fill
+          className="object-cover rounded-full"
           priority
         />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+      </div>
+      <h1 className="text-4xl font-bold mb-8">Meeting Cost Calculator</h1>
+      <div className="w-full max-w-md">
+        <form onSubmit={startMeeting} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="numPeople">
+              Number of People
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              id="numPeople"
+              type="number"
+              min="1"
+              step="1"
+              value={numPeople}
+              onChange={(e) => setNumPeople(e.target.value)}
+              placeholder="Enter number of people"
+              disabled={isRunning}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+          </div>
+          <div className="mb-6">
+            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="costPerHour">
+              Cost per Person per Hour ($)
+            </label>
+            <input
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              id="costPerHour"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={costPerHour}
+              onChange={(e) => setCostPerHour(e.target.value)}
+              placeholder="Enter cost per hour"
+              disabled={isRunning}
+            />
+          </div>
+          {error && (
+            <p className="text-red-500 text-sm mb-4">{error}</p>
+          )}
+          {!isRunning ? (
+            <button
+              className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+              type="submit"
+            >
+              Start Meeting
+            </button>
+          ) : (
+            <button
+              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
+              type="button"
+              onClick={stopMeeting}
+            >
+              End Meeting
+            </button>
+          )}
+        </form>
+        
+        {meetingCosts && (
+          <div className="bg-green-50 border border-green-200 rounded p-4">
+            <h2 className="text-lg font-semibold text-center mb-4 text-black">Meeting Cost Breakdown</h2>
+            <div className="space-y-2">
+              <p className="flex justify-between">
+                <span className="text-gray-600">Total Cost So Far:</span>
+                <span className="text-green-700 font-bold text-xl">${meetingCosts.totalCostSoFar.toFixed(2)}</span>
+              </p>
+              <div className="border-t border-gray-200 my-4"></div>
+              <p className="flex justify-between">
+                <span className="text-gray-600">Per Hour:</span>
+                <span className="text-green-700 font-semibold">${meetingCosts.costPerHour.toFixed(2)}</span>
+              </p>
+              <p className="flex justify-between">
+                <span className="text-gray-600">Per Minute:</span>
+                <span className="text-green-700 font-semibold">${meetingCosts.costPerMinute.toFixed(2)}</span>
+              </p>
+              <p className="flex justify-between">
+                <span className="text-gray-600">Per Second:</span>
+                <span className="text-green-700 font-semibold">${meetingCosts.costPerSecond.toFixed(2)}</span>
+              </p>
+              <div className="border-t border-gray-200 my-4"></div>
+              <p className="flex justify-between">
+                <span className="text-gray-600">Duration:</span>
+                <span className="text-gray-700 font-semibold">{formatDuration(meetingCosts.elapsedSeconds)}</span>
+              </p>
+              <p className="text-xs text-gray-500 mt-4 text-center">
+                Started at: {formatUTCTimestamp(meetingCosts.startTime)} 
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
