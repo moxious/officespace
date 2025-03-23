@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 
 interface MeetingCostResponse {
@@ -22,25 +22,7 @@ export default function Home() {
   const [isRunning, setIsRunning] = useState(false);
   const [meetingStartTime, setMeetingStartTime] = useState<string | null>(null);
 
-  useEffect(() => {
-    let intervalId: NodeJS.Timeout;
-
-    if (isRunning && meetingStartTime) {
-      // Initial fetch
-      fetchMeetingCost();
-      
-      // Set up interval for subsequent fetches
-      intervalId = setInterval(fetchMeetingCost, 1000);
-    }
-
-    return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-  }, [isRunning, meetingStartTime]);
-
-  const fetchMeetingCost = async () => {
+  const fetchMeetingCost = useCallback(async () => {
     if (!meetingStartTime) return;
 
     try {
@@ -65,11 +47,29 @@ export default function Home() {
 
       const data = await response.json();
       setMeetingCosts(data);
-    } catch (err) {
+    } catch {
       setError('Failed to calculate meeting cost');
       setIsRunning(false);
     }
-  };
+  }, [meetingStartTime, numPeople, costPerHour]);
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (isRunning && meetingStartTime) {
+      // Initial fetch
+      fetchMeetingCost();
+      
+      // Set up interval for subsequent fetches
+      intervalId = setInterval(fetchMeetingCost, 1000);
+    }
+
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [isRunning, meetingStartTime, fetchMeetingCost]);
 
   const formatUTCTimestamp = (isoString: string) => {
     const date = new Date(isoString);

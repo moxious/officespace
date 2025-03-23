@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
       if (!startTime.endsWith('Z')) {
         console.warn(`Input timestamp was converted from local/other timezone to UTC: ${startTime} -> ${startTimeUTC.toISOString()}`);
       }
-    } catch (error) {
+    } catch {
       return NextResponse.json(
         { error: 'Invalid startTime format. Please provide a valid timestamp.' },
         { status: 400 }
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     };
 
     return NextResponse.json(response);
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: 'Invalid request format' },
       { status: 400 }

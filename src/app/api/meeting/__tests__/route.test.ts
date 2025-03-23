@@ -10,7 +10,7 @@ global.Request = class extends Request {
   constructor(input: RequestInfo | URL, init?: RequestInit) {
     super(input, init);
   }
-} as any;
+} as typeof Request;
 
 describe('Meeting Cost API', () => {
   const mockDate = new Date('2024-03-22T10:00:00Z');
